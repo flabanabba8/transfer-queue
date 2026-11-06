@@ -1,0 +1,7 @@
+{
+  "name": "transfer-queue",
+  "label": "Transfer Queue",
+  "version": "0.1.0",
+  "description": "Manage bounded HTTPS downloads and tus uploads.",
+  "api": "plugin_api.py"
+}

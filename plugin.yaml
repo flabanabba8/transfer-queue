@@ -1,0 +1,14 @@
+name: transfer-queue
+version: "0.1.0"
+description: "Serialize bounded, rate-limited HTTPS downloads and resumable tus uploads."
+author: "Transfer Queue contributors"
+license: GPL-3.0-or-later
+requires_hermes: ">=0.22.0"
+provides_tools:
+  - transfer_create_download
+  - transfer_run_download
+  - transfer_status
+  - transfer_create_upload
+  - transfer_run_upload
+  - transfer_upload_status
+  - transfer_list_jobs
