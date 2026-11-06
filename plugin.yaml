@@ -10,5 +10,6 @@ provides_tools:
   - transfer_status
   - transfer_create_upload
   - transfer_run_upload
+  - transfer_upload_preflight
   - transfer_upload_status
   - transfer_list_jobs

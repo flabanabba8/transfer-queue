@@ -59,12 +59,30 @@ class UploadTests(unittest.TestCase):
         self.assertFalse(second['remote_checksum_verified'])
         self.assertEqual(self.server.data, self.source.read_bytes())
 
+    def test_preflight_sends_no_file_data_or_state_changes(self):
+        before = self.queue.upload_status(self.job)
+        with patch.object(core, 'open_request', side_effect=self.server):
+            result = self.queue.upload_preflight(self.job, self.url)
+        self.assertEqual(result['status'], 'ready')
+        self.assertEqual(result['remaining_bytes'], 1500)
+        self.assertEqual(self.server.patch_count, 0)
+        self.assertEqual(self.queue.upload_status(self.job), before)
+        self.server.data = b'x'
+        with patch.object(core, 'open_request', side_effect=self.server):
+            result = self.queue.upload_preflight(self.job, self.url)
+        self.assertEqual(result['status'], 'offset_conflict')
+        self.assertEqual(self.server.patch_count, 0)
+
     def test_unknown_response_requires_explicit_reconciliation(self):
         self.server.fail_after_accept = True
         with patch.object(core, 'open_request', side_effect=self.server), patch.object(module.upload.time, 'sleep'):
             with self.assertRaisesRegex(RuntimeError, 'unknown'):
                 self.queue.run_upload(self.job, self.url, 1024)
             self.assertEqual(self.queue.upload_status(self.job)['status'], 'outcome_unknown')
+            before = self.queue.upload_status(self.job)
+            self.assertEqual(self.queue.upload_preflight(self.job, self.url)['status'], 'reconciliation_needed')
+            self.assertEqual(self.queue.upload_status(self.job), before)
+            self.assertEqual(self.server.patch_count, 1)
             reconciled = self.queue.run_upload(self.job, self.url, 1024)
             self.assertEqual(reconciled['status'], 'reconciled')
             self.assertEqual(self.server.patch_count, 1)

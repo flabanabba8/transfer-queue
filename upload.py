@@ -67,6 +67,33 @@ class Uploads(core.Queue):
                     'total_bytes': state['identity'][2], 'uncertain_chunk_bytes': state['pending'],
                     'notice': 'Remote offset acknowledgment is not a server-side content checksum.'}
 
+    def upload_preflight(self, job_id, url):
+        fingerprint = core.url_hash(url)
+        with self.lock():
+            state = json.loads(self.upload_path(job_id).read_text())
+            if state['url_hash'] != fingerprint: raise ValueError('URL differs from the original job')
+            source = source_file(state['source'], self.root.parent, bool(state.get('profile_media_allowed')))
+            if identity(source) != state['identity']: raise ValueError('Source changed; create a new upload job')
+            total = state['identity'][2]
+            request = urllib.request.Request(url, headers={'Tus-Resumable': '1.0.0', 'Cache-Control': 'no-store'}, method='HEAD')
+            try:
+                with core.open_request(request) as response:
+                    if response.status not in (200, 204): raise ValueError('Unexpected tus HEAD status')
+                    remote = response_offset(response, total, require_length=True)
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                raise RuntimeError('Upload preflight could not read the remote offset') from exc
+            if identity(source) != state['identity']: raise ValueError('Source changed during preflight')
+            pending = state['pending']
+            if pending is not None:
+                status = 'reconciliation_needed' if remote in (state['offset'], state['offset'] + pending) else 'offset_conflict'
+            elif remote != state['offset']:
+                status = 'offset_conflict'
+            else:
+                status = 'complete_offset' if remote == total else 'ready'
+            return {'job_id': job_id, 'status': status, 'remote_offset': remote, 'total_bytes': total,
+                    'remaining_bytes': total - remote, 'source_sha256': state['sha256'],
+                    'notice': 'HEAD only; no file bytes sent or local state changed. Remote offset does not verify remote content; reconciliation still requires an explicit run.'}
+
     def run_upload(self, job_id, url, bytes_per_second):
         fingerprint = core.url_hash(url)
         if type(bytes_per_second) is not int or not 1024 <= bytes_per_second <= 20 * 1024**2:
