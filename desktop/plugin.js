@@ -11,6 +11,7 @@ function Transfers({ ctx }) {
   const [mode, setMode] = useState('download'), [url, setUrl] = useState(''), [source, setSource] = useState('')
   const [sha, setSha] = useState(''), [rate, setRate] = useState(''), [jobId, setJobId] = useState(''), [job, setJob] = useState(null)
   const [allowProfileMedia, setAllowProfileMedia] = useState(false)
+  const [savedJobs, setSavedJobs] = useState(null)
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
   const call = (operation, args) => ctx.rest('/action', { method: 'POST', body: { operation, arguments: args }, timeoutMs: 90000 })
   const task = async fn => { setBusy(true); setError(''); try { await fn() } catch (e) { setError(String(e.message || e)) } finally { setBusy(false) } }
@@ -37,6 +38,16 @@ function Transfers({ ctx }) {
       h('div', { style: row }, button('Create job', create, busy || !!job || !url.trim() || (mode === 'upload' ? !source.trim() : !/^[0-9a-f]{64}$/.test(sha.trim())))),
       h('p', null, 'Jobs do not start automatically. Only use a destination you trust.')),
     h('section', { style: card, 'aria-label': 'Transfer control' },
+      button('List local jobs', () => task(async () => setSavedJobs(await call('transfer_list_jobs', {}))), busy),
+      savedJobs && h('div', null,
+        savedJobs.unreadable_records > 0 && h('p', { role:'alert' }, `${savedJobs.unreadable_records} job record(s) could not be read.`),
+        savedJobs.jobs.length === 0 && h('p', null, 'No local jobs found.'),
+        h('ul', null, ...savedJobs.jobs.slice(0, 100).map(item => h('li', { key:item.job_id },
+          button(`${item.direction} · ${item.status} · ${item.job_id}`, () => task(async () => {
+            const selected = await call(item.direction === 'upload' ? 'transfer_upload_status' : 'transfer_status', {job_id:item.job_id})
+            setMode(item.direction); setUrl(''); setJobId(item.job_id); setJob(selected)
+          }), busy)))),
+        savedJobs.jobs.length > 100 && h('p', null, `${savedJobs.jobs.length - 100} additional local job(s) not shown.`)),
       label('Existing job ID', h('input', { style: { ...field, display: 'block', width: '100%' }, value: jobId, disabled: busy, onChange: e => { setJobId(e.target.value); setJob(null) } })),
       h('div', { style: row }, button('Check job', () => task(() => status(jobId.trim())), busy || !jobId.trim())),
       label('Maximum bytes per second', h('input', { style: { ...field, display: 'block' }, type: 'number', min: 1024, max: 20971520, step: 1, value: rate, disabled: busy, onChange: e => setRate(e.target.value) })),

@@ -28,6 +28,9 @@ class DashboardTests(unittest.TestCase):
                 self.assertEqual(status.status_code, 200)
                 self.assertEqual(status.json()['status'], 'queued')
                 self.assertEqual(status.json()['acknowledged_bytes'], 0)
+                listing = client.post('/action', json={'operation':'transfer_list_jobs','arguments':{}})
+                self.assertEqual(listing.status_code, 200)
+                self.assertEqual(listing.json()['jobs'][0]['job_id'], job)
                 self.assertEqual(client.post('/action', json={'operation':'not_allowed','arguments':{}}).status_code, 400)
                 self.assertEqual(source.read_bytes(), b'fixture')
             private = root/'.hermes'/'plugin-data'

@@ -13,6 +13,7 @@ export async function run(assert, document) {
       case 'transfer_create_download': return { job_id:id, status:'queued' }
       case 'transfer_status': return { job_id:body.arguments.job_id, status:'in_progress', received_bytes:10, total_bytes:25 }
       case 'transfer_run_download': return { job_id:id, status:'verified', received_bytes:25, total_bytes:25, output_path:'/tmp/result.bin' }
+      case 'transfer_list_jobs': return {jobs:[{job_id:'c'.repeat(32), direction:'upload', status:'outcome_unknown'}], unreadable_records:0}
       default: throw Error('Unexpected operation')
     }
   } }
@@ -55,6 +56,13 @@ export async function run(assert, document) {
     await click('Check job')
     assert.equal(document.querySelectorAll('input')[0].disabled, false)
     assert.equal(calls.filter(c => c.operation === 'transfer_status').length, 1)
+    await click('List local jobs')
+    await click('upload · outcome_unknown · ' + 'c'.repeat(32))
+    assert.equal(calls.at(-1).operation, 'transfer_upload_status')
+    assert.equal(calls.at(-1).arguments.job_id, 'c'.repeat(32))
+    assert.equal(document.querySelector('select').value, 'upload')
+    assert.equal(document.querySelector('input[type=url]').value, '')
+    assert.equal(calls.filter(c => c.operation === 'transfer_run_upload').length, 1)
   } finally { await act(async () => root.unmount()) }
-  return {passed:true, checks:['explicit job creation', 'profile media opt-in', 'no automatic transfer', 'unknown outcome visible', 'explicit status refresh', 'reconnect existing job', 'verified path collapsed', 'timer cleanup']}
+  return {passed:true, checks:['explicit job creation', 'profile media opt-in', 'no automatic transfer', 'unknown outcome visible', 'explicit status refresh', 'reconnect existing job', 'recover local job without transfer', 'verified path collapsed', 'timer cleanup']}
 }
