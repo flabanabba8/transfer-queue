@@ -8,6 +8,7 @@ Both directions are limited to 512 MiB, use HTTPS without embedded credentials o
 
 On POSIX systems, newly created job records and downloaded files use owner-only
 permissions. Existing files are not retroactively changed; review their access.
+POSIX file locking is required; Linux was tested and Windows is unsupported.
 
 The Hermes Desktop page supports job creation, listing and reconnecting to local jobs, explicit slice execution and status checks. Reconnecting clears the URL, which must be supplied again before a transfer. Uploads are not sent until an explicit run action; uncertain outcomes are displayed. Functional Desktop/API tests pass, while native visual review remains pending.
 
