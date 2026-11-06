@@ -62,6 +62,9 @@ class LocalTusTests(unittest.TestCase):
                 queue = module.Uploads(folder / 'queue')
                 job = queue.create_upload(str(path), url)['job_id']
                 with patch.object(core, 'open_request', side_effect=lambda req: opener.open(req, timeout=5)), patch.object(module.upload.time, 'sleep'):
+                    preflight = queue.upload_preflight(job, url)
+                    self.assertEqual(preflight['status'], 'ready')
+                    self.assertEqual(Handler.data, b'')
                     queue.run_upload(job, url, 1024)
                     result = queue.run_upload(job, url, 1024)
                 self.assertEqual(result['status'], 'accepted')
