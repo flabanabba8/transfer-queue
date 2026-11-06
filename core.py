@@ -61,7 +61,7 @@ class Queue:
     def save(self, path, state):
         temp = self.root / (uuid.uuid4().hex + '.tmp')
         try:
-            with temp.open('x') as f: json.dump(state, f)
+            with os.fdopen(os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), 'w') as f: json.dump(state, f)
             os.replace(temp, path)
         finally: temp.unlink(missing_ok=True)
 
@@ -152,7 +152,9 @@ class Queue:
                     self.save(meta, state)
                     start = time.monotonic()
                     received = 0
-                    with part.open(mode) as out:
+                    flags = os.O_WRONLY | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0)
+                    flags |= os.O_APPEND if mode == 'ab' else os.O_TRUNC
+                    with os.fdopen(os.open(part, flags, 0o600), mode) as out:
                         while offset + received < total and time.monotonic() - start < max_seconds:
                             chunk = response.read(min(65536, bytes_per_second, total - offset - received))
                             if not chunk: break

@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import io
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -51,6 +52,21 @@ class TransferTests(unittest.TestCase):
         self.assertEqual(result['status'], 'checksum_mismatch')
         self.assertIsNone(result['output_path'])
         with self.assertRaises(ValueError): self.queue.create_download('https://example.com/file?token=not-a-real-token', 'a' * 64)
+
+    def test_new_job_and_download_are_private_with_permissive_umask(self):
+        previous = os.umask(0)
+        try:
+            job = self.queue.create_download(self.url, hashlib.sha256(self.data).hexdigest())['job_id']
+            meta, part, final = self.queue.paths(job)
+            self.assertEqual(meta.stat().st_mode & 0o777, 0o600)
+            clock = Clock()
+            with patch.object(core, 'open_request', return_value=Response(self.data, 200, {'Content-Length':'2048','ETag':'"one"'})), patch.object(core.time, 'monotonic', clock.monotonic), patch.object(core.time, 'sleep', clock.sleep):
+                result = self.queue.run_download(job, self.url, 2048, 2)
+            self.assertEqual(result['status'], 'verified')
+            self.assertEqual(meta.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(final.stat().st_mode & 0o777, 0o600)
+        finally:
+            os.umask(previous)
 
     def test_recover_completed_partial(self):
         meta, part, final = self.queue.paths(self.job)
