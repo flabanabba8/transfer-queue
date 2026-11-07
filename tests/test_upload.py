@@ -91,7 +91,7 @@ class UploadTests(unittest.TestCase):
             self.assertEqual(self.server.patch_count, 2)
 
     def test_active_profile_media_requires_explicit_opt_in(self):
-        private = self.root/'.hermes'
+        private = self.root/'.HeRmEs'
         source_dir = private/'plugin-data'/'tutorial'
         source_dir.mkdir(parents=True)
         media = source_dir/'demo.mp4'

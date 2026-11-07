@@ -13,15 +13,15 @@ PRIVATE = {'.ssh', '.gnupg', '.aws', '.azure', '.codex', '.docker', '.kube', '.p
 def source_file(value, profile_data=None, allow_profile_media=False):
     p = Path(value).expanduser()
     original = p.parts
-    if p.is_symlink() or any(x in PRIVATE - {'.hermes'} for x in original):
+    if p.is_symlink() or any(x.casefold() in PRIVATE - {'.hermes'} for x in original):
         raise ValueError('Private paths and symlink inputs are unsupported')
     p = p.resolve(strict=True)
     data_root = Path(profile_data).resolve() if profile_data is not None else None
-    profile_home = data_root.parent if data_root is not None and data_root.name == 'plugin-data' else None
+    profile_home = data_root.parent if data_root is not None and data_root.name.casefold() == 'plugin-data' else None
     allowed = (allow_profile_media and profile_home is not None and p.is_relative_to(data_root) and
                p.suffix.lower() in ('.mp4', '.mkv', '.mov', '.webm', '.m4b', '.wav', '.srt', '.png'))
-    protected = '.hermes' in original or '.hermes' in p.parts or (profile_home is not None and p.is_relative_to(profile_home))
-    if (any(x in PRIVATE - {'.hermes'} for x in p.parts) or protected and not allowed or not p.is_file()):
+    protected = any(x.casefold() == '.hermes' for x in original) or any(x.casefold() == '.hermes' for x in p.parts) or (profile_home is not None and p.is_relative_to(profile_home))
+    if (any(x.casefold() in PRIVATE - {'.hermes'} for x in p.parts) or protected and not allowed or not p.is_file()):
         raise ValueError('Choose a file outside private configuration or explicitly allow active-profile plugin media')
     if p.stat().st_size <= 0 or p.stat().st_size > core.MAX_BYTES: raise ValueError('Upload size outside supported range')
     return p
