@@ -4,11 +4,14 @@ Serialize bounded transfers through a private local queue. HTTPS downloads requi
 
 Uploads require a tus resource whose declared length matches the source and whose offset starts at zero. No authentication, signed URL query strings, redirects, upload creation, background scheduler or automatic retry is supported. The remote server's acknowledged offset does **not** prove its content matches the local checksum; verify independently at the destination. Only supply URLs and files you intend to send to trusted servers. Rate controls pace this plugin's chunks, not all network buffering or other applications' traffic. Jobs and downloaded content remain in the private Hermes plugin data directory until removed.
 
-Both directions are limited to 512 MiB, use HTTPS without embedded credentials or query strings, and bypass proxy configuration. Download servers need a content length and strong ETag for resume. Thirteen Python tests include a loopback TLS tus server and interrupted-response reconciliation; an independently checksum-verified real 29,502-byte HTTPS download also passed with a 206 resume response. No public upload, authenticated server, bandwidth measurement, or production destination has been tested. Protocol: https://tus.io/protocols/resumable-upload
+Both directions are limited to 512 MiB, use HTTPS without embedded credentials or query strings, and bypass proxy configuration. Download servers need a content length and strong ETag for resume. Fourteen Linux Python tests include a loopback TLS tus server and interrupted-response reconciliation; an independently checksum-verified real 29,502-byte HTTPS download also passed with a 206 resume response. No public upload, authenticated server, bandwidth measurement, or production destination has been tested. Protocol: https://tus.io/protocols/resumable-upload
 
 On POSIX systems, newly created job records and downloaded files use owner-only
 permissions. Existing files are not retroactively changed; review their access.
-POSIX file locking is required; Linux was tested and Windows is unsupported.
+Locking supports POSIX and Windows. A native Windows loopback TLS fixture tested
+upload reconciliation, resumed download and lock contention; Windows ACLs and
+adversarial filesystem races and production destinations remain unverified. A concurrent Windows operation may
+report the queue busy if a long-running transfer holds the lock.
 
 The Hermes Desktop page supports job creation, listing and reconnecting to local jobs, explicit slice execution and status checks. Reconnecting clears the URL, which must be supplied again before a transfer. Uploads are not sent until an explicit run action; uncertain outcomes are displayed. Functional Desktop/API tests pass, while native visual review remains pending.
 

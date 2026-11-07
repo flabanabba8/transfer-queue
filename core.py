@@ -1,6 +1,5 @@
 """Serialized bounded HTTPS downloads; no credentials, upload or automatic retry."""
 import contextlib
-import fcntl
 import hashlib
 import json
 import os
@@ -11,6 +10,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from . import locking
 
 MAX_BYTES = 512 * 1024**2
 CONTENT_RANGE = re.compile(r'^bytes (\d+)-(\d+)/(\d+)$')
@@ -48,8 +48,7 @@ class Queue:
 
     @contextlib.contextmanager
     def lock(self):
-        with (self.root / '.lock').open('a') as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
+        with locking.exclusive_lock(self.root / '.lock', 'Transfer queue is busy', blocking=True):
             yield
 
     def paths(self, job_id):

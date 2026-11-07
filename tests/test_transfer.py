@@ -2,14 +2,16 @@ import hashlib
 import importlib.util
 import io
 import os
+import sys
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 
-spec = importlib.util.spec_from_file_location('transfer_core', Path(__file__).parents[1] / 'core.py')
-core = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(core)
+root = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location('transfer_core_fixture',root/'__init__.py',submodule_search_locations=[str(root)])
+plugin = importlib.util.module_from_spec(spec);sys.modules[spec.name]=plugin;spec.loader.exec_module(plugin)
+core = plugin.core
 
 class Response(io.BytesIO):
     def __init__(self, data, status, headers):
@@ -32,6 +34,11 @@ class TransferTests(unittest.TestCase):
         self.job = self.queue.create_download(self.url, hashlib.sha256(self.data).hexdigest())['job_id']
 
     def tearDown(self): self.tmp.cleanup()
+
+    def test_queue_lock_excludes_another_owner(self):
+        with self.queue.lock():
+            with self.assertRaisesRegex(RuntimeError, 'busy'):
+                with plugin.locking.exclusive_lock(self.root/'.lock', 'busy'):pass
 
     def test_resume_and_verify(self):
         clock = Clock()
