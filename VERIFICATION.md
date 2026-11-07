@@ -1,5 +1,7 @@
 # Verification
 
+- A standalone headless browser fixture with approximate theme variables was inspected at 375 px. The initially disabled controls now appear distinct and the page had no horizontal overflow; the Desktop flow test passed. This is not native Hermes Desktop or a complete accessibility review.
+
 - Mixed-case protected-directory fixtures passed on Linux; no real credentials were used. This is not a full platform or publication audit.
 
 - Fourteen Linux Python tests passed in a Hermes-compatible dependency overlay, including resumed download, checksum verification, upload reconciliation, loopback TLS and owner-only POSIX permissions for new job and download files under a permissive umask. The system Python run could not import the Desktop API test because FastAPI was absent.
